@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pip Manager — Python 包管理器</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- 顶部导航栏 -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" opacity="0.6"/>
+      </svg>
+      <span class="logo-text">Pip<span class="logo-accent">Manager</span></span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" id="btnMirror" title="镜像源设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>
+      <span>镜像源</span>
+      <span class="mirror-badge" id="mirrorBadge">官方</span>
+    </button>
+    <button class="btn btn-ghost" id="btnRefresh" title="刷新环境">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      <span>刷新</span>
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- 侧边栏：Python 环境 -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2 class="sidebar-title">Python 环境</h2>
+      <span class="env-count" id="envCount">0</span>
+    </div>
+    <div class="sidebar-list" id="envList">
+      <div class="sidebar-empty">
+        <div class="empty-icon">⌛</div>
+        <p>正在扫描系统中的 Python 安装...</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 主内容区 -->
+  <main class="main">
+    <!-- 工具栏 -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="env-info" id="envInfo">
+          <span class="env-placeholder">请选择左侧的 Python 环境</span>
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" id="searchInput" placeholder="搜索包名..." disabled>
+        </div>
+        <button class="btn btn-primary" id="btnInstall" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          <span>安装包</span>
+        </button>
+        <button class="btn btn-ghost" id="btnUpgradePip" disabled title="升级 pip 本身">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M12 7v10M7.5 9.5L12 7l4.5 2.5"/></svg>
+          <span>升级 pip</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 包列表 -->
+    <div class="table-wrap">
+      <table class="pkg-table" id="pkgTable">
+        <thead>
+          <tr>
+            <th class="col-name">包名</th>
+            <th class="col-version">版本</th>
+            <th class="col-location">安装位置</th>
+            <th class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody id="pkgBody">
+        </tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="empty-icon-large">📦</div>
+        <h3>暂无数据</h3>
+        <p>请在左侧选择一个 Python 环境以查看已安装的包</p>
+      </div>
+      <div class="loading-state" id="loadingState" style="display:none">
+        <div class="spinner"></div>
+        <p>正在加载包列表...</p>
+      </div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="statusbar">
+      <span id="statusText">就绪</span>
+    </div>
+  </main>
+</div>
+
+<!-- 安装包对话框 -->
+<div class="modal-overlay" id="installModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>安装 pip 包</h3>
+      <button class="modal-close" data-close="installModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-hint">输入要安装的包名（支持版本指定，如 <code>requests==2.31.0</code>）</p>
+      <input type="text" class="modal-input" id="installInput" placeholder="requests" autocomplete="off">
+      <div class="terminal-output" id="installOutput" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="installModal">取消</button>
+      <button class="btn btn-primary" id="installConfirm">开始安装</button>
+    </div>
+  </div>
+</div>
+
+<!-- 镜像源对话框 -->
+<div class="modal-overlay" id="mirrorModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>镜像源设置</h3>
+      <button class="modal-close" data-close="mirrorModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="mirror-current" id="mirrorCurrent">
+        <span class="mirror-label">当前源：</span>
+        <code id="currentMirrorUrl">-</code>
+      </div>
+      <p class="modal-hint">输入镜像源地址，或从下方常用源选择：</p>
+      <input type="text" class="modal-input" id="mirrorInput" placeholder="https://pypi.tuna.tsinghua.edu.cn/simple" autocomplete="off">
+      <div class="preset-list" id="presetList"></div>
+      <div class="terminal-output" id="mirrorOutput" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="mirrorModal">取消</button>
+      <button class="btn btn-primary" id="mirrorConfirm">应用</button>
+    </div>
+  </div>
+</div>
+
+<!-- 卸载确认对话框 -->
+<div class="modal-overlay" id="uninstallModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>确认卸载</h3>
+      <button class="modal-close" data-close="uninstallModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>确定要卸载 <strong id="uninstallPkgName">-</strong> 吗？此操作不可撤销。</p>
+      <div class="terminal-output" id="uninstallOutput" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="uninstallModal">取消</button>
+      <button class="btn btn-danger" id="uninstallConfirm">确认卸载</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast 通知 -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
